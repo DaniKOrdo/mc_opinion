@@ -1,0 +1,6 @@
+# TOKEN information # 
+dk_token.py
+
+# Optional #
+pyvenv.cfg
+__pycache__
