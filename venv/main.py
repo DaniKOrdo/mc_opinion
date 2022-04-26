@@ -42,10 +42,6 @@ def start(update: Update, context: CallbackContext) -> None:
     )
 
 
-def help_command(update: Update, context: CallbackContext) -> None:
-    """Send a message when the command /help is issued."""
-    update.message.reply_text('Help!')
-
 def captura(update: Update, context: CallbackContext) -> None:
     """Send a message when the command /help is issued."""
     driver.save_screenshot("./venv/img/screenshot.png")
@@ -60,22 +56,36 @@ def get_id(update: Update, context: CallbackContext) -> None:
     """Get id"""
     update.message.reply_text(update.message.chat_id)
 
+def ticket(update: Update, context: CallbackContext) -> None:
+    """Get ticket and write"""
+    num_ticket = update.message.text.split(' ')[1]
+    # update.message.reply_text(num_ticket)
+    get_id = driver.find_element_by_id('receiptCode')
+    slow_typing(get_id, num_ticket)
 
+    time.sleep(1)
 
-#TODO - SECRET KEY, GET MESSAGE, ALL STUFF LIKE GET ID AND WRITE
-
-
-
-
-
-
-
-
+    submit = driver.find_element_by_xpath('//*[@id="welcomeMessage"]/div[4]/button')
+    submit.click()
+    
 
 def slow_typing(element, text):
     for character in text:
         element.send_keys(character)
-        time.sleep(0.3)
+        time.sleep(0.1)
+
+def ticket_code():
+    ci = driver.find_element_by_id('receiptCode')
+    slow_typing(ci, 'CCJHCQ-RMMZCQ-C7CKC9')
+
+
+def reset():
+    driver.close
+    time.sleep(1)
+    driver.get('https://mcdonalds.fast-insight.com/voc/es/es')
+
+
+
 
 def ci():
     ci = driver.find_element_by_id('numberCID')
@@ -110,9 +120,10 @@ def main() -> None:
 
     # on different commands - answer in Telegram
     dispatcher.add_handler(CommandHandler("start", start))
-    dispatcher.add_handler(CommandHandler("help", help_command))
     dispatcher.add_handler(CommandHandler("captura", captura))
     dispatcher.add_handler(CommandHandler("getid", get_id))
+    dispatcher.add_handler(CommandHandler("ticket", ticket))
+    dispatcher.add_handler(CommandHandler("reset", reset))
 
     # Start the Bot
     updater.start_polling()
