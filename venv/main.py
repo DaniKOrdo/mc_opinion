@@ -1,7 +1,9 @@
+from ast import arguments
 import time
 import logging
 import telegram
 import dk_token as dk
+from datetime import date
 from selenium import webdriver
 from webdriver_manager.chrome import ChromeDriverManager
 from selenium.webdriver.support.ui import Select
@@ -11,17 +13,20 @@ from telegram.ext import Updater, CommandHandler, MessageHandler, Filters, Callb
 
 TELEGRAM_BOT_TOKEN = dk.TOKEN
 TELEGRAM_CHAT_ID = dk.CHAT_ID
-PHOTO_PATH = './venv/img/screenshot.png'
-
 bot = telegram.Bot(token=TELEGRAM_BOT_TOKEN)
 
+#TODO Poner tambien la hora y minutos para que no se sobreescriban
+# dd/mm/YY
+today = date.today()
+actual_date = today.strftime("%d-%m-%Y")
 
 # Selenium config
 driver_options = Options()
 driver_options.add_argument('--headless')
 driver_options.add_argument('--no-sandbox')
+driver_options.add_argument("--incognito")
 #driver = webdriver.Chrome(executable_path='/usr/local/bin/chromedriver', options=driver_options)
-driver = webdriver.Chrome(ChromeDriverManager().install())
+driver = webdriver.Chrome(ChromeDriverManager().install(), options=driver_options)
 driver.get('https://mcdonalds.fast-insight.com/voc/es/es')
 
 # Enable logging
@@ -33,6 +38,7 @@ logger = logging.getLogger(__name__)
 
 
 # Command handlers
+# Start
 def start(update: Update, context: CallbackContext) -> None:
     """Send a message when the command /start is issued."""
     user = update.effective_user
@@ -41,52 +47,50 @@ def start(update: Update, context: CallbackContext) -> None:
         reply_markup=ForceReply(selective=True),
     )
 
+# Bot Check
+def bot_check(update: Update, context: CallbackContext) -> None:
+    update.message.reply_text('Bot ✅')
 
+# Get id 
+def get_id(update: Update, context: CallbackContext) -> None:
+    update.message.reply_text(update.message.chat_id)
+
+# Captura de pantalla
 def captura(update: Update, context: CallbackContext) -> None:
-    """Send a message when the command /help is issued."""
-    driver.save_screenshot("./venv/img/screenshot.png")
+    PHOTO_PATH = './venv/img/screenshot' + actual_date + '.png'
+    driver.save_screenshot(PHOTO_PATH)
     time.sleep(2)
     bot.send_photo(chat_id=TELEGRAM_CHAT_ID, photo=open(PHOTO_PATH, 'rb'))
 
-def echo(update: Update, context: CallbackContext) -> None:
-    """Echo the user message."""
-    update.message.reply_text(update.message.text)
-
-def get_id(update: Update, context: CallbackContext) -> None:
-    """Get id"""
-    update.message.reply_text(update.message.chat_id)
-
+# Generar ticket
 def ticket(update: Update, context: CallbackContext) -> None:
     """Get ticket and write"""
     num_ticket = update.message.text.split(' ')[1]
     # update.message.reply_text(num_ticket)
-    get_id = driver.find_element_by_id('receiptCode')
+    get_id = driver.find_element('id', 'receiptCode')
     slow_typing(get_id, num_ticket)
 
     time.sleep(1)
 
-    submit = driver.find_element_by_xpath('//*[@id="welcomeMessage"]/div[4]/button')
+    submit = driver.find_element('xpath', '//*[@id="welcomeMessage"]/div[4]/button')
     submit.click()
     
 
+# Escritura del bot mas lenta
 def slow_typing(element, text):
     for character in text:
         element.send_keys(character)
         time.sleep(0.1)
 
-def ticket_code():
-    ci = driver.find_element_by_id('receiptCode')
-    slow_typing(ci, 'CCJHCQ-RMMZCQ-C7CKC9')
-
-
-def reset():
+# Reiniciar chrome
+def reset_chrome(pdate: Update, context: CallbackContext) -> None:
     driver.close
     time.sleep(1)
     driver.get('https://mcdonalds.fast-insight.com/voc/es/es')
 
 
 
-
+# Recursos
 def ci():
     ci = driver.find_element_by_id('numberCID')
     slow_typing(ci, 'ci_number')
@@ -120,10 +124,11 @@ def main() -> None:
 
     # on different commands - answer in Telegram
     dispatcher.add_handler(CommandHandler("start", start))
+    dispatcher.add_handler(CommandHandler("bot", bot_check))
     dispatcher.add_handler(CommandHandler("captura", captura))
     dispatcher.add_handler(CommandHandler("getid", get_id))
     dispatcher.add_handler(CommandHandler("ticket", ticket))
-    dispatcher.add_handler(CommandHandler("reset", reset))
+    dispatcher.add_handler(CommandHandler("reset", reset_chrome))
 
     # Start the Bot
     updater.start_polling()
@@ -132,4 +137,3 @@ def main() -> None:
 
 if __name__ == '__main__':
     main()
-
